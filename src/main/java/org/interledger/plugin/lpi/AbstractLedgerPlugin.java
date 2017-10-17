@@ -21,19 +21,13 @@ import org.interledger.plugin.lpi.events.OutgoingTransferRejectedEvent;
 import org.interledger.plugin.lpi.exceptions.LedgerPluginNotConnectedException;
 import org.interledger.plugin.lpi.handlers.LedgerPluginEventHandler;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import com.google.common.io.BaseEncoding;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -102,35 +96,9 @@ public abstract class AbstractLedgerPlugin<T extends LedgerPluginConfig> impleme
    * Perform any required initialization of this ledger plugin, and return a new options object if
    * required.
    */
-  private final Map<String, String> initializeLedgerPlugin(final Map<String, String> options) {
+  protected Map<String, String> initializeLedgerPlugin(final Map<String, String> options) {
     Objects.requireNonNull(options);
-
-    // Set a ConnectorSecret if none is found...
-    final Map<String, String> updatedOptions;
-    if (options.get(LedgerPluginConfig.CONNECTOR_SECRET) == null) {
-      final byte[] randomBytes = new byte[32];
-      ThreadLocalRandom.current().nextBytes(randomBytes);
-
-      final Map<String, String> updatedMap = Maps.newHashMap(options);
-      updatedMap.putIfAbsent(LedgerPluginConfig.CONNECTOR_SECRET, new String(randomBytes));
-
-      updatedOptions = ImmutableMap.copyOf(updatedMap);
-    } else {
-      updatedOptions = options;
-    }
-
-    return this.afterInitializeLedgerPlugin(updatedOptions);
-  }
-
-  /**
-   * Overridable method that allows implementations to perform additional initialization of this
-   * plugin.
-   */
-  protected Map<String, String> afterInitializeLedgerPlugin(
-      final Map<String, String> ledgerPluginOptions
-  ) {
-    Objects.requireNonNull(ledgerPluginOptions);
-    return ledgerPluginOptions;
+    return options;
   }
 
   /**
@@ -213,62 +181,6 @@ public abstract class AbstractLedgerPlugin<T extends LedgerPluginConfig> impleme
   @Override
   public void removeLedgerPluginEventHandler(UUID eventHandlerId) {
     this.ledgerEventHandlers.remove(eventHandlerId);
-  }
-
-  /**
-   * Using HMAC-SHA-256, deterministically generate a UUID from a secret and a public input, which
-   * in this case is a ledger-prefix and a transferId.
-   *
-   * The ID for the next transfer should be deterministically generated, so that the connector
-   * doesn't send duplicate outgoing transfers if it receives duplicate notifications.
-   *
-   * The deterministic generation should ideally be impossible for a third party to predict.
-   * Otherwise an attacker might be able to squat on a predicted ID in order to interfere with a
-   * payment or make a connector look unreliable. In order to assure this, the connector may use a
-   * secret that seeds the deterministic ID generation.
-   *
-   * @param ledgerPrefix A {@link InterledgerAddress} containing a ledger prefix.
-   * @param transferId   A {@link TransferId} that uniquely identifies the transfer.
-   *
-   * @returns A deterministically generated {@link UUID}.
-   **/
-  @Override
-  public TransferId generateTransferId(
-      final InterledgerAddress ledgerPrefix, final TransferId transferId
-  ) {
-    Objects.requireNonNull(ledgerPrefix);
-    LedgerPrefixUtils.assertLedgerPrefix(ledgerPrefix);
-    Objects.requireNonNull(transferId);
-
-    final String publicInput = String.format("%s/%s", ledgerPrefix, transferId);
-
-    return Optional.ofNullable(this.getLedgerPluginConfig().getConnectorSecret())
-        .map(String::getBytes)
-        .map(secretBytes -> {
-          try {
-            final MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-            messageDigest.update(secretBytes);
-            byte[] digest = messageDigest.digest(publicInput.getBytes());
-
-            final String hash = BaseEncoding.base16().encode(digest).substring(0, 36);
-            final char[] hashCharArray = hash.toCharArray();
-            hashCharArray[8] = '-';
-            hashCharArray[13] = '-';
-            hashCharArray[14] = '4';
-            hashCharArray[18] = '-';
-            hashCharArray[19] = '8';
-            hashCharArray[23] = '-';
-            return UUID.fromString(new String(hashCharArray));
-          } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-          }
-        })
-        .map(TransferId::of)
-        // If no secret is configured, then throw an exception! In general this should not happen
-        // because the connector secret is initialized by default in this implementation, but it's
-        // possible that a subclass may have overridden this behavior.
-        .orElseThrow(() -> new RuntimeException(
-            LedgerPluginConfig.CONNECTOR_SECRET + " is not configured for this connector!"));
   }
 
   protected T getLedgerPluginConfig() {

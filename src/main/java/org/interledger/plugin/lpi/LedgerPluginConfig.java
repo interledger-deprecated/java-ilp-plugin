@@ -4,7 +4,6 @@ import org.interledger.InterledgerAddress;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import javax.money.CurrencyUnit;
 
@@ -19,7 +18,6 @@ public interface LedgerPluginConfig {
   String CONNECTOR_ACCOUNT = "connector_account";
   String EXPECTED_CURRENCY_UNIT = "expected_currency_unit";
   String TIMEOUT = "timeout";
-  String CONNECTOR_SECRET = "connector_secret";
 
   /**
    * The type of this ledger plugin.
@@ -48,12 +46,6 @@ public interface LedgerPluginConfig {
   default Optional<Integer> getTimeout() {
     return Optional.empty();
   }
-
-  /**
-   * A secret supplied by a connector to generate deterministic instances of {@link UUID} from a
-   * particular public input.
-   */
-  String getConnectorSecret();
 
   /**
    * The options for a given ledger plugin.

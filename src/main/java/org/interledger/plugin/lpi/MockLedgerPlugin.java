@@ -33,7 +33,6 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 
 import javax.money.CurrencyUnit;
 import javax.money.Monetary;
@@ -78,7 +77,7 @@ public class MockLedgerPlugin
    * @param configurationOptions A {@link Map} of configuration strings for this plugin.
    * @param simulatedLedger      A {@link SimulatedLedger} that is used by this mock plugin.
    */
-  protected MockLedgerPlugin(
+  public MockLedgerPlugin(
       final Map<String, String> configurationOptions, final SimulatedLedger simulatedLedger
   ) {
     super(configurationOptions);
@@ -93,7 +92,7 @@ public class MockLedgerPlugin
    * @param ledgerPluginEventEmitter A {@link LedgerPluginEventEmitter} to control how events are
    *                                 emitted to/from the plugin.
    */
-  protected MockLedgerPlugin(
+  public MockLedgerPlugin(
       final Map<String, String> configurationOptions,
       final SimulatedLedger simulatedLedger,
       final LedgerPluginEventEmitter ledgerPluginEventEmitter
@@ -261,7 +260,7 @@ public class MockLedgerPlugin
             .orElseThrow(() -> new RuntimeException(
                 String.format("No %s option supplied in LedgerPlugin Options!", LEDGER_PREFIX)));
 
-        return LedgerPrefixUtils.assertLedgerPrefix(ledgerPrefix);
+        return InterledgerAddress.requireLedgerPrefix(ledgerPrefix);
       }
 
       @Override
@@ -272,7 +271,7 @@ public class MockLedgerPlugin
             .orElseThrow(() -> new RuntimeException(String
                 .format("No %s option supplied in LedgerPlugin Options!", CONNECTOR_ACCOUNT)));
 
-        return LedgerPrefixUtils.assertNotLedgerPrefix(account);
+        return InterledgerAddress.requireNotLedgerPrefix(account);
       }
 
       @Override
@@ -281,17 +280,6 @@ public class MockLedgerPlugin
             .map(Monetary::getCurrency)
             .orElseThrow(() -> new RuntimeException(String
                 .format("No %s option supplied in LedgerPlugin Options!", EXPECTED_CURRENCY_UNIT)));
-      }
-
-      /**
-       * A secret supplied by a connector to generate deterministic instances of {@link UUID} from a
-       * particular public input.
-       */
-      @Override
-      public String getConnectorSecret() {
-        return Optional.ofNullable(options.get(CONNECTOR_SECRET))
-            .orElseThrow(() -> new RuntimeException(String
-                .format("No %s option supplied in LedgerPlugin Options!", CONNECTOR_SECRET)));
       }
 
       /**

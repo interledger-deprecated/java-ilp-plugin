@@ -43,7 +43,7 @@
     <jackson-annotations.version>2.8.9</jackson-annotations.version>
     <guava.version>21.0</guava.version>
     <immutables.version>2.5.6</immutables.version>
-    <ilp-core.version>0.8.0-SNAPSHOT</ilp-core.version>
+    <ilp-core.version>0.9.0-SNAPSHOT</ilp-core.version>
 
     <maven-checkstyle-plugin.version>2.17</maven-checkstyle-plugin.version>
     <checkstyle.consoleOutput>true</checkstyle.consoleOutput>

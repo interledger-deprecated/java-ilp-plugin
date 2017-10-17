@@ -267,23 +267,4 @@ public interface LedgerPlugin extends Plugin {
    * Accessor the emitter so that external actors can emit events to this plugin.
    */
   LedgerPluginEventEmitter getLedgerPluginEventEmitter();
-
-  /**
-   * Generate a new {@link TransferId} using the supplied inputs.
-   *
-   * Implementations _may_ wish to generate this identifier in a deterministic manner. For example,
-   * in most implementations, this identifier should be generated so that the connector doesn't send
-   * duplicate outgoing transfers if it receives duplicate notifications. Such deterministically
-   * generated identifiers should ideally be impossible for a third party to predict so that an
-   * attacker cannot squat on a predicted ID in order to interfere with a payment or make a
-   * connector look unreliable.
-   *
-   * @param sourceLedgerPrefix A {@link InterledgerAddress} to use when generating the transfer Id.
-   * @param sourceTransferId   A {@link TransferId} that uniquely identifies an incoming transfer.
-   *
-   * @returns {String} Deterministic output UUID
-   **/
-  TransferId generateTransferId(
-      final InterledgerAddress sourceLedgerPrefix, final TransferId sourceTransferId
-  );
 }

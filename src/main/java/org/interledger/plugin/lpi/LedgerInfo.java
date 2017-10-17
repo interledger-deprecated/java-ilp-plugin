@@ -68,6 +68,6 @@ public interface LedgerInfo {
    */
   @Value.Check
   default void check() {
-    LedgerPrefixUtils.assertLedgerPrefix(getLedgerPrefix());
+    InterledgerAddress.requireLedgerPrefix(getLedgerPrefix());
   }
 }
