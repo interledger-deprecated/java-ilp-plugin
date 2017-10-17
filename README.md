@@ -1,7 +1,7 @@
 # Java Interledger Plugin Interface [![join the chat on gitter][gitter-image]][gitter-url] [![circle-ci][circle-image]][circle-url] [![codecov][codecov-image]][codecov-url]
 
-[gitter-image]: https://badges.gitter.im/interledger/java-ilp-plugin.svg
-[gitter-url]: https://gitter.im/interledger/java-ilp-plugin
+[gitter-image]: https://badges.gitter.im/interledger/java.svg
+[gitter-url]: https://gitter.im/interledger/java
 [circle-image]: https://circleci.com/gh/interledger/java-ilp-plugin.svg?style=shield
 [circle-url]: https://circleci.com/gh/interledger/java-ilp-plugin
 [codecov-image]: https://codecov.io/gh/interledger/java-ilp-plugin/branch/master/graph/badge.svg
