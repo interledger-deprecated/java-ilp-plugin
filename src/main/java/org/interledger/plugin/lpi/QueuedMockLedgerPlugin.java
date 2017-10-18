@@ -16,7 +16,6 @@ import org.interledger.plugin.lpi.events.OutgoingTransferRejectedEvent;
 
 import com.google.common.eventbus.EventBus;
 
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -61,15 +60,16 @@ public class QueuedMockLedgerPlugin extends MockLedgerPlugin implements LedgerPl
   /**
    * Required-args Constructor.
    *
-   * @param configurationOptions A {@link Map} of configuration strings for this plugin.
+   * @param ledgerPluginConfig A {@link ExtendedLedgerPluginConfig} of configuration strings for
+   *                           this plugin.
    */
   protected QueuedMockLedgerPlugin(
-      final Map<String, String> configurationOptions,
+      final ExtendedLedgerPluginConfig ledgerPluginConfig,
       final SimulatedLedger simulatedLedger,
       final EventBus eventBus
   ) {
     super(
-        configurationOptions, simulatedLedger, new AsyncLedgerPluginEventEmitter(eventBus)
+        ledgerPluginConfig, simulatedLedger, new AsyncLedgerPluginEventEmitter(eventBus)
     );
   }
 

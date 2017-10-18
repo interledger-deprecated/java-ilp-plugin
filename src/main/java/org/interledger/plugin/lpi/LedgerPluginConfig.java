@@ -10,14 +10,14 @@ import javax.money.CurrencyUnit;
 /**
  * Configuration information relating to a ledger plugin. This object is used to initialize a {@link
  * LedgerPlugin}, but not otherwise used in ledger plugin implementations.
+ *
+ * Additionally, the mechanism used to supply the typed values defined in this interface are
+ * implementation defined, and will likely vary depending on each implementation's configuration
+ * source. As an extension mechanism, {@link #getOptions()} is provided to allow arbitrary
+ * configuration options, but the preferred mechanism is to extend this class and then provide typed
+ * configuration to any particular ledger plugin.
  */
 public interface LedgerPluginConfig {
-
-  String LEDGER_PREFIX = "ledger_prefix";
-  String LEDGER_PLUGIN_TYPE_ID = "ledger_plugin_type_id";
-  String CONNECTOR_ACCOUNT = "connector_account";
-  String EXPECTED_CURRENCY_UNIT = "expected_currency_unit";
-  String TIMEOUT = "timeout";
 
   /**
    * The type of this ledger plugin.
@@ -49,7 +49,11 @@ public interface LedgerPluginConfig {
 
   /**
    * The options for a given ledger plugin.
+   *
+   * @deprecated This method may go away in the future, in favor of a fully-typed configuration
+   *     system.
    */
+  @Deprecated
   Map<String, String> getOptions();
 
 }

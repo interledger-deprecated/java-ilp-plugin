@@ -58,18 +58,15 @@ public class MockQueuedLedgerPluginTest extends AbstractMockLedgerPluginTest {
 
     // Initialize the ledger plugin under test...
     this.eventBus = new EventBus();
-    this.mockLedgerPlugin = new QueuedMockLedgerPlugin(getOptions(), simulatedLedger,
+    this.mockLedgerPlugin = new QueuedMockLedgerPlugin(getLedgerPluginConfig(), simulatedLedger,
         eventBus);
 
     // Wire-up an async event handler...
     final EventBusLedgerPluginEventHandler asyncLedgerPluginEventHandler
-        = new EventBusLedgerPluginEventHandler(mockLedgerPlugin, ledgerPluginEventHandlerMock);
+        = new EventBusLedgerPluginEventHandler(ledgerPluginEventHandlerMock);
     eventBus.register(asyncLedgerPluginEventHandler);
     mockLedgerPlugin.addLedgerPluginEventHandler(asyncLedgerPluginEventHandler);
     mockLedgerPlugin.connect();
-
-    // Fake/Simulated auth, just for testing purpoess..
-    mockLedgerPlugin.getSimulatedLedger().setSignedInConnector(CONNECTOR_ACCOUNT_ON_LEDGER);
 
     // Reset the event handler so we don't count the "connect" event, in general
     reset(ledgerPluginEventHandlerMock);
@@ -84,13 +81,9 @@ public class MockQueuedLedgerPluginTest extends AbstractMockLedgerPluginTest {
 
     private final LedgerPluginEventHandler mockLedgerPluginEventHandler;
 
-    private LedgerPlugin ledgerPlugin;
-
     private EventBusLedgerPluginEventHandler(
-        final LedgerPlugin ledgerPlugin,
         final LedgerPluginEventHandler mockLedgerPluginEventHandler
     ) {
-      this.ledgerPlugin = ledgerPlugin;
       this.mockLedgerPluginEventHandler = Objects.requireNonNull(mockLedgerPluginEventHandler);
     }
 
@@ -193,4 +186,6 @@ public class MockQueuedLedgerPluginTest extends AbstractMockLedgerPluginTest {
     }
 
   }
+
+
 }

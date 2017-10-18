@@ -16,11 +16,9 @@ import org.interledger.plugin.lpi.events.ImmutableOutgoingTransferFulfilledEvent
 import org.interledger.plugin.lpi.events.ImmutableOutgoingTransferPreparedEvent;
 import org.interledger.plugin.lpi.events.ImmutableOutgoingTransferRejectedEvent;
 import org.interledger.plugin.lpi.exceptions.InvalidFulfillmentException;
-import org.interledger.plugin.lpi.exceptions.InvalidMessageException;
 import org.interledger.plugin.lpi.exceptions.InvalidTransferException;
 import org.interledger.plugin.lpi.exceptions.TransferAlreadyFulfilledException;
 import org.interledger.plugin.lpi.exceptions.TransferAlreadyRolledBackException;
-import org.interledger.plugin.lpi.exceptions.TransferNotAcceptedException;
 import org.interledger.plugin.lpi.exceptions.TransferNotFoundException;
 
 import com.google.common.collect.ImmutableMap;
@@ -35,7 +33,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import javax.money.CurrencyUnit;
-import javax.money.Monetary;
 
 /**
  * A demonstration implementation of {@link LedgerPlugin} that simulates an underlying ledger while
@@ -69,35 +66,43 @@ public class MockLedgerPlugin
     extends AbstractLedgerPlugin<ExtendedLedgerPluginConfig> implements LedgerPlugin {
 
   public static final String PLUGIN_TYPE = "ilp-plugin-mock";
+
+  static String LEDGER_PREFIX = "ledger_prefix";
+  static String CONNECTOR_ACCOUNT = "connector_account";
+  static String EXPECTED_CURRENCY_UNIT = "expected_currency_unit";
+  static String TIMEOUT = "timeout";
+
   private final SimulatedLedger simulatedLedger;
 
   /**
    * Required-args Constructor.
    *
-   * @param configurationOptions A {@link Map} of configuration strings for this plugin.
-   * @param simulatedLedger      A {@link SimulatedLedger} that is used by this mock plugin.
+   * @param ledgerPluginConfig A {@link ExtendedLedgerPluginConfig} of configuration strings for
+   *                           this plugin.
+   * @param simulatedLedger    A {@link SimulatedLedger} that is used by this mock plugin.
    */
   public MockLedgerPlugin(
-      final Map<String, String> configurationOptions, final SimulatedLedger simulatedLedger
+      final ExtendedLedgerPluginConfig ledgerPluginConfig, final SimulatedLedger simulatedLedger
   ) {
-    super(configurationOptions);
+    super(ledgerPluginConfig);
     this.simulatedLedger = Objects.requireNonNull(simulatedLedger);
   }
 
   /**
    * Required-args Constructor.
    *
-   * @param configurationOptions     A {@link Map} of configuration strings for this plugin.
+   * @param ledgerPluginConfig       A {@link ExtendedLedgerPluginConfig} of configuration strings
+   *                                 for this plugin.
    * @param simulatedLedger          A {@link SimulatedLedger} that is used by this mock plugin.
    * @param ledgerPluginEventEmitter A {@link LedgerPluginEventEmitter} to control how events are
    *                                 emitted to/from the plugin.
    */
   public MockLedgerPlugin(
-      final Map<String, String> configurationOptions,
+      final ExtendedLedgerPluginConfig ledgerPluginConfig,
       final SimulatedLedger simulatedLedger,
       final LedgerPluginEventEmitter ledgerPluginEventEmitter
   ) {
-    super(configurationOptions, ledgerPluginEventEmitter);
+    super(ledgerPluginConfig, ledgerPluginEventEmitter);
     this.simulatedLedger = Objects.requireNonNull(simulatedLedger);
   }
 
@@ -198,7 +203,6 @@ public class MockLedgerPlugin
           .debug("rejectIncomingTransfer for transferId: {} and rejectionReason: {}", transferId,
               rejectionReason);
     }
-
     this.simulatedLedger.rejectIncomingTransfer(transferId, rejectionReason);
   }
 
@@ -220,88 +224,98 @@ public class MockLedgerPlugin
   /**
    * An example of how to configure custom, though typed, configuration for a ledger plugin.
    */
-  interface ExtendedLedgerPluginConfig extends
-      LedgerPluginConfig {
+  public interface ExtendedLedgerPluginConfig extends LedgerPluginConfig {
 
-    String PASSWORD = "password";
+    static ExtendedLedgerPluginConfig from(
+        final LedgerPluginConfig ledgerPluginConfig, final String password
+    ) {
+      return new Impl(ledgerPluginConfig, password);
+    }
 
     /**
      * The password for the connector account on the ledger.
      */
     String getPassword();
-  }
 
-  /**
-   * Converts a {@link Map} of configuration strings into an instance of {@link
-   * ExtendedLedgerPluginConfig} to illustrate how to extend the {@link LedgerPluginConfig}.
-   */
-  @Override
-  protected ExtendedLedgerPluginConfig toLedgerPluginConfig(final Map<String, String> options) {
-    Objects.requireNonNull(options);
+    class Impl implements ExtendedLedgerPluginConfig {
 
-    return new ExtendedLedgerPluginConfig() {
+      private final LedgerPluginConfig ledgerPluginConfig;
+      private final String password;
+
+      public Impl(final LedgerPluginConfig ledgerPluginConfig, final String password) {
+        this.password = Objects.requireNonNull(password);
+        this.ledgerPluginConfig = Objects.requireNonNull(ledgerPluginConfig);
+      }
+
+      /**
+       * The password for the connector account on the ledger.
+       */
       @Override
       public String getPassword() {
-        return Optional.ofNullable(options.get(PASSWORD))
-            .orElseThrow(() -> new RuntimeException(
-                String.format("No %s option supplied in LedgerPlugin Options!", PASSWORD)));
+        return this.password;
       }
 
+      /**
+       * The type of this ledger plugin.
+       */
       @Override
       public LedgerPluginTypeId getLedgerPluginTypeId() {
-        return LedgerPluginTypeId.of(PLUGIN_TYPE);
+        return ledgerPluginConfig.getLedgerPluginTypeId();
       }
 
+      /**
+       * The identifying ledger prefix for this plugin.
+       */
       @Override
       public InterledgerAddress getLedgerPrefix() {
-        final InterledgerAddress ledgerPrefix = Optional
-            .ofNullable(options.get(LEDGER_PREFIX))
-            .map(InterledgerAddress::of)
-            .orElseThrow(() -> new RuntimeException(
-                String.format("No %s option supplied in LedgerPlugin Options!", LEDGER_PREFIX)));
-
-        return InterledgerAddress.requireLedgerPrefix(ledgerPrefix);
+        return ledgerPluginConfig.getLedgerPrefix();
       }
 
+      /**
+       * The connector account on the underlying ledger.
+       */
       @Override
       public InterledgerAddress getConnectorAccount() {
-        final InterledgerAddress account = Optional
-            .ofNullable(options.get(CONNECTOR_ACCOUNT))
-            .map(InterledgerAddress::of)
-            .orElseThrow(() -> new RuntimeException(String
-                .format("No %s option supplied in LedgerPlugin Options!", CONNECTOR_ACCOUNT)));
-
-        return InterledgerAddress.requireNotLedgerPrefix(account);
+        return ledgerPluginConfig.getConnectorAccount();
       }
 
+      /**
+       * The expected currency-unit for this ledger plugin.
+       */
       @Override
       public CurrencyUnit getExpectedCurrencyUnit() {
-        return Optional.ofNullable(options.get(EXPECTED_CURRENCY_UNIT))
-            .map(Monetary::getCurrency)
-            .orElseThrow(() -> new RuntimeException(String
-                .format("No %s option supplied in LedgerPlugin Options!", EXPECTED_CURRENCY_UNIT)));
+        return ledgerPluginConfig.getExpectedCurrencyUnit();
       }
 
       /**
        * The options for a given ledger plugin.
+       *
+       * @deprecated This method may go away in the future, in favor of a fully-typed configuration
+       *     system.
        */
       @Override
       public Map<String, String> getOptions() {
-        return options;
+        return ledgerPluginConfig.getOptions();
       }
-    };
+
+      @Override
+      public String toString() {
+        return "ExtendedLedgerPluginConfigImpl{" +
+            "ledgerPluginConfig=" + ledgerPluginConfig +
+            ", password='" + password + '\'' +
+            '}';
+      }
+    }
   }
 
   /**
    * A simulated ledger (used only for testing and demonstration purposes) that allows for multiple
-   * ledger plugins to connect to it using a unique Interledger address and a password of
-   * "password".
+   * ledger plugins to connect to it using a unique Interledger address.
+   *
+   * WARNING: This ledger is not meant for production usage. Among other things, it does not enforce
+   * any sort of auth because it is meant for simulation and testing purposes only.
    */
   public static class SimulatedLedger {
-
-    // This is not how authentication context would be performed in a real ledger, but since this
-    // class is only for simulation purposes, this is tolerable.
-    private Optional<InterledgerAddress> signedInConnectorPrincipal = Optional.empty();
 
     // Ordinarily, this would be provided during the connect operation, but for this Mock plugin,
     // it's passed-in because this whole plugin is simulated.
@@ -368,9 +382,6 @@ public class MockLedgerPlugin
                 .triggeredAt(Instant.now())
                 .build());
       }
-
-      // Some fake authentication...
-      this.assertTransferAuth(transfer.getTransferId(), transfer.getSourceAccount());
 
       if (Optional.ofNullable(transfers.get(transfer.getTransferId())).isPresent() == true) {
         // This transfer has already been prepared, so ignore it.
@@ -470,9 +481,6 @@ public class MockLedgerPlugin
           .orElseThrow(() -> new TransferNotFoundException(this.getLedgerInfo().getLedgerPrefix(),
               transferId));
 
-      // Some fake authentication...
-      this.assertTransferAuth(transferId, transferHolder.getTransfer().getDestinationAccount());
-
       // Throw an exception if the transfer is already rejected...
       if (transferHolder.getTransferStatus() == TransferStatus.EXECUTED) {
         throw new TransferAlreadyFulfilledException(this.getLedgerInfo().getLedgerPrefix(),
@@ -518,9 +526,6 @@ public class MockLedgerPlugin
     public void sendMessage(final Message message) {
       Objects.requireNonNull(message);
 
-      // Some fake authentication...
-      this.assertMessageAuth(message.getId(), message.getFromAddress());
-
       /////////////////////////
       // Publish an Outgoing Event to any connections that match the sender...
       /////////////////////////
@@ -552,10 +557,6 @@ public class MockLedgerPlugin
      * A helper function to simulate the expiration of a transfer.
      */
     public void expireTransfer(final TransferId transferId) {
-
-      // No fake-Auth here since the test-harness is the one that typically rejects, in order to
-      // simulate the ledger doing this in a deterministic manner.
-
       Optional.ofNullable(this.transfers.get(transferId)).ifPresent(transferHolder -> {
 
         /////////////////////////
@@ -593,6 +594,13 @@ public class MockLedgerPlugin
                     .build()
             ));
       });
+    }
+
+    /**
+     * Reset all balances for all accounts.
+     */
+    public void resetBalances() {
+      this.transfers.clear();
     }
 
     /**
@@ -659,76 +667,6 @@ public class MockLedgerPlugin
       String getPassword();
 
       LedgerPluginEventEmitter getLedgerPluginEventEmitter();
-    }
-
-    /**
-     * This method allows a unit test to simulate an authentication context. In a real ledger, we
-     * would never do this for a variety of reasons, least of which is that this only allows a
-     * single connector to be "authenticated" to the ledger at a given time. However, since this is
-     * just a simulated ledger to support the Mock Ledger Plugin, this is tolerable.
-     */
-    public Optional<InterledgerAddress> getSignedInConnectorAccount() {
-      return this.signedInConnectorPrincipal;
-    }
-
-    /**
-     * This method allows a unit test to simulate an authentication context. In a real ledger, we
-     * would never do this for a variety of reasons, least of which is that this only allows a
-     * single connector to be "authenticated" to the ledger at a given time. However, since this is
-     * just a simulated ledger to support the Mock Ledger Plugin, this is tolerable.
-     */
-    public void setSignedInConnector(final InterledgerAddress connectorAddress) {
-      this.signedInConnectorPrincipal = Optional.of(connectorAddress);
-    }
-
-    /**
-     * Assert that {@code requiredConnectoAccount} is signed-in via our fake-auth mechanism.
-     */
-    private void assertTransferAuth(
-        final TransferId transferId,
-        final InterledgerAddress requiredConnectoAccount
-    ) {
-      final TransferNotAcceptedException exception = new TransferNotAcceptedException(
-          this.getLedgerInfo().getLedgerPrefix(),
-          transferId,
-          InterledgerProtocolError.builder()
-              .triggeredByAddress(this.getLedgerInfo().getLedgerPrefix())
-              .errorCode(ErrorCode.F00_BAD_REQUEST)
-              .triggeredAt(Instant.now()).build()
-      );
-
-      final InterledgerAddress principal = this.signedInConnectorPrincipal
-          .orElseThrow(() -> exception);
-      if (principal.equals(requiredConnectoAccount) == false) {
-        throw new TransferNotAcceptedException(
-            String
-                .format("Expected principal of '%s', but was instead '%s'", requiredConnectoAccount,
-                    principal),
-            exception,
-            this.getLedgerInfo().getLedgerPrefix(),
-            transferId,
-            InterledgerProtocolError.builder().errorCode(ErrorCode.F00_BAD_REQUEST)
-                .triggeredByAddress(this.getSignedInConnectorAccount().get())
-                .triggeredAt(Instant.now()).build());
-      }
-    }
-
-    /**
-     * Assert that {@code requiredConnectoAccount} is signed-in via our fake-auth mechanism.
-     */
-    private void assertMessageAuth(
-        final MessageId messageId,
-        final InterledgerAddress requiredConnectoAccount
-    ) {
-      final InvalidMessageException exception
-          = new InvalidMessageException(this.getLedgerInfo().getLedgerPrefix(), messageId);
-
-      final InterledgerAddress principal = this.signedInConnectorPrincipal
-          .orElseThrow(() -> exception);
-
-      if (principal.equals(requiredConnectoAccount) == false) {
-        throw exception;
-      }
     }
   }
 }

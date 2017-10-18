@@ -15,13 +15,13 @@ import org.interledger.cryptoconditions.PreimageSha256Fulfillment;
 import org.interledger.ilp.InterledgerPayment;
 import org.interledger.ilp.InterledgerProtocolError;
 import org.interledger.ilp.InterledgerProtocolError.ErrorCode;
+import org.interledger.plugin.lpi.MockLedgerPlugin.ExtendedLedgerPluginConfig;
 import org.interledger.plugin.lpi.events.IncomingTransferFulfilledEvent;
 import org.interledger.plugin.lpi.events.IncomingTransferRejectedEvent;
 import org.interledger.plugin.lpi.events.OutgoingTransferPreparedEvent;
 import org.interledger.plugin.lpi.exceptions.InvalidFulfillmentException;
 import org.interledger.plugin.lpi.exceptions.InvalidTransferException;
 import org.interledger.plugin.lpi.exceptions.LedgerPluginNotConnectedException;
-import org.interledger.plugin.lpi.exceptions.TransferNotAcceptedException;
 import org.interledger.plugin.lpi.exceptions.TransferNotFoundException;
 import org.interledger.plugin.lpi.handlers.LedgerPluginEventHandler;
 
@@ -37,6 +37,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+
+import javax.money.CurrencyUnit;
+import javax.money.Monetary;
 
 /**
  * An abstract class that provides a common test-harness for the Mock ledger plugins defined in this
@@ -60,11 +63,11 @@ public abstract class AbstractMockLedgerPluginTest {
 
   protected Map<String, String> getOptions() {
     return ImmutableMap.of(
-        LedgerPluginConfig.LEDGER_PREFIX, LEDGER_PREFIX.getValue(),
-        LedgerPluginConfig.CONNECTOR_ACCOUNT, CONNECTOR_ACCOUNT_ON_LEDGER.getValue(),
-        LedgerPluginConfig.EXPECTED_CURRENCY_UNIT, "USD",
-        LedgerPluginConfig.LEDGER_PLUGIN_TYPE_ID, MockLedgerPlugin.PLUGIN_TYPE,
-        "password", "password");
+        MockLedgerPlugin.LEDGER_PREFIX, LEDGER_PREFIX.getValue(),
+        MockLedgerPlugin.CONNECTOR_ACCOUNT, CONNECTOR_ACCOUNT_ON_LEDGER.getValue(),
+        MockLedgerPlugin.EXPECTED_CURRENCY_UNIT, "USD",
+        "password", "password"
+    );
   }
 
   @Test
@@ -136,28 +139,6 @@ public abstract class AbstractMockLedgerPluginTest {
       this.mockLedgerPlugin.sendTransfer(transfer);
       fail("Shouldn't be able to send a transfer to yourself!");
     } catch (InvalidTransferException e) {
-      assertThat(e.getPluginLedgerPrefix(), is(LEDGER_PREFIX));
-      assertThat(e.getTransferId(), is(transfer.getTransferId()));
-      verifyZeroInteractions(ledgerPluginEventHandlerMock);
-      throw e;
-    }
-  }
-
-  /**
-   * This test attempts to send a transfer from a source account that is not controlled by the
-   * connector.
-   */
-  @Test(expectedExceptions = TransferNotAcceptedException.class)
-  public void testSendTransferWithInvalidFrom() {
-    final Transfer transfer = this.constructTransfer(
-        UUID.randomUUID(), LEDGER_PREFIX.with("source"), LEDGER_PREFIX.with("destination")
-    );
-
-    try {
-      this.mockLedgerPlugin.getSimulatedLedger().setSignedInConnector(CONNECTOR_ACCOUNT_ON_LEDGER);
-      this.mockLedgerPlugin.sendTransfer(transfer);
-      fail("Shouldn't be able to send a transfer from an invalid source account!");
-    } catch (TransferNotAcceptedException e) {
       assertThat(e.getPluginLedgerPrefix(), is(LEDGER_PREFIX));
       assertThat(e.getTransferId(), is(transfer.getTransferId()));
       verifyZeroInteractions(ledgerPluginEventHandlerMock);
@@ -316,5 +297,40 @@ public abstract class AbstractMockLedgerPluginTest {
         .triggeredByAddress(LEDGER_PREFIX)
         //.data(new byte[0])
         .build();
+  }
+
+  protected ExtendedLedgerPluginConfig getLedgerPluginConfig() {
+    return new ExtendedLedgerPluginConfig() {
+
+      @Override
+      public LedgerPluginTypeId getLedgerPluginTypeId() {
+        return LedgerPluginTypeId.of("ilp-plugin-mock");
+      }
+
+      @Override
+      public InterledgerAddress getLedgerPrefix() {
+        return LEDGER_PREFIX;
+      }
+
+      @Override
+      public InterledgerAddress getConnectorAccount() {
+        return CONNECTOR_ACCOUNT_ON_LEDGER;
+      }
+
+      @Override
+      public CurrencyUnit getExpectedCurrencyUnit() {
+        return Monetary.getCurrency("USD");
+      }
+
+      @Override
+      public Map<String, String> getOptions() {
+        return ImmutableMap.of();
+      }
+
+      @Override
+      public String getPassword() {
+        return "password";
+      }
+    };
   }
 }

@@ -56,31 +56,25 @@ public abstract class AbstractLedgerPlugin<T extends LedgerPluginConfig> impleme
    * Required-args Constructor which utilizes a default {@link LedgerPluginEventEmitter} that
    * synchronously connects to the event handlers.
    *
-   * @param configurationOptions A {@link Map} of configuration strings for this plugin.
+   * @param ledgerPluginConfig A {@link T} that specified ledger plugin options.
    */
-  protected AbstractLedgerPlugin(final Map<String, String> configurationOptions) {
-    Objects.requireNonNull(configurationOptions);
-    this.ledgerPluginConfig = toLedgerPluginConfig(
-        this.initializeLedgerPlugin(configurationOptions)
-    );
+  protected AbstractLedgerPlugin(final T ledgerPluginConfig) {
+    this.ledgerPluginConfig = Objects.requireNonNull(ledgerPluginConfig);
     this.ledgerPluginEventEmitter = new SyncLedgerPluginEventEmitter(this.ledgerEventHandlers);
   }
 
   /**
    * Required-args Constructor.
    *
-   * @param configurationOptions     A {@link Map} of configuration strings for this plugin.
+   * @param ledgerPluginConfig       A {@link T} that specified ledger plugin options.
    * @param ledgerPluginEventEmitter A {@link LedgerPluginEventEmitter} that is used to emit events
    *                                 from this plugin.
    */
   protected AbstractLedgerPlugin(
-      final Map<String, String> configurationOptions,
+      final T ledgerPluginConfig,
       final LedgerPluginEventEmitter ledgerPluginEventEmitter
   ) {
-    Objects.requireNonNull(configurationOptions);
-    this.ledgerPluginConfig = toLedgerPluginConfig(
-        this.initializeLedgerPlugin(configurationOptions)
-    );
+    this.ledgerPluginConfig = Objects.requireNonNull(ledgerPluginConfig);
     this.ledgerPluginEventEmitter = Objects.requireNonNull(ledgerPluginEventEmitter);
   }
 
@@ -92,27 +86,9 @@ public abstract class AbstractLedgerPlugin<T extends LedgerPluginConfig> impleme
     return getLedgerPluginConfig().getConnectorAccount();
   }
 
-  /**
-   * Perform any required initialization of this ledger plugin, and return a new options object if
-   * required.
-   */
-  protected Map<String, String> initializeLedgerPlugin(final Map<String, String> options) {
-    Objects.requireNonNull(options);
-    return options;
-  }
-
-  /**
-   * Converts a {@link Map} of configuration key/values strings into an instance of {@link T} (that
-   * sub-classes can define) to provide their own typed configuration while conforming to the
-   * requirements of this abstract class.
-   */
-  protected abstract T toLedgerPluginConfig(Map<String, String> options);
-
   @Override
   public final void connect() {
-    if (logger.isDebugEnabled()) {
-      logger.debug("connect: {}");
-    }
+    logger.info("connect: {}", this.getLedgerPluginConfig());
 
     try {
       if (!this.isConnected()) {
@@ -138,9 +114,7 @@ public abstract class AbstractLedgerPlugin<T extends LedgerPluginConfig> impleme
 
   @Override
   public final void disconnect() {
-    if (logger.isDebugEnabled()) {
-      logger.debug("disconnect");
-    }
+    logger.info("disconnect {}", this.getLedgerPluginConfig());
 
     if (this.isConnected()) {
       this.doDisconnect();

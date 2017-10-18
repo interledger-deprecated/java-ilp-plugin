@@ -32,9 +32,6 @@ public class MockLedgerPluginTest extends AbstractMockLedgerPluginTest {
   public void setup() {
     MockitoAnnotations.initMocks(this);
 
-    //  when(connectorMock.getLedgerPluginManager()).thenReturn(ledgerPluginMock);
-    // when(ledgerPluginMock.getTransferCorrelationRepository()).thenReturn(transferCorrelationRepositoryMock);
-
     // Enable debug mode...
     ((ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME))
         .setLevel(Level.DEBUG);
@@ -48,13 +45,10 @@ public class MockLedgerPluginTest extends AbstractMockLedgerPluginTest {
     final SimulatedLedger simulatedLedger = new SimulatedLedger(ledgerInfo);
 
     // Initialize the ledger plugin under test...
-    this.mockLedgerPlugin = new MockLedgerPlugin(getOptions(), simulatedLedger);
+    this.mockLedgerPlugin = new MockLedgerPlugin(getLedgerPluginConfig(), simulatedLedger);
     mockLedgerPlugin.addLedgerPluginEventHandler(ledgerPluginEventHandlerMock);
 
     mockLedgerPlugin.connect();
-
-    // Fake/Simulated auth, just for testing purpoess..
-    mockLedgerPlugin.getSimulatedLedger().setSignedInConnector(CONNECTOR_ACCOUNT_ON_LEDGER);
 
     // Reset the event handler so we don't count the "connect" event, in general
     reset(ledgerPluginEventHandlerMock);
@@ -133,4 +127,5 @@ public class MockLedgerPluginTest extends AbstractMockLedgerPluginTest {
         .build();
     simulatedLedger.getTransfers().put(transfer.getTransferId(), preparedTransferHolder);
   }
+
 }
