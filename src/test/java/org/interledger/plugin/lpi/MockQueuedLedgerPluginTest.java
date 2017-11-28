@@ -49,7 +49,6 @@ public class MockQueuedLedgerPluginTest extends AbstractMockLedgerPluginTest {
         .setLevel(Level.DEBUG);
 
     this.ledgerInfo = ImmutableLedgerInfo.builder()
-        .currencyPrecision(2)
         .currencyScale(8)
         .currencyUnit(Monetary.getCurrency("USD"))
         .ledgerPrefix(LEDGER_PREFIX)

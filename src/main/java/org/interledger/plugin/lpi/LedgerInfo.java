@@ -33,12 +33,14 @@ public interface LedgerInfo {
   CurrencyUnit getCurrencyUnit();
 
   /**
-   * The number of digits before the decimal point (precision), supported by this peer.
-   */
-  Integer getCurrencyPrecision();
-
-  /**
-   * The number of digits after the decimal point (scale), supported by this peer.
+   * <p>The order of magnitude to express one full currency unit in ledger's base units. More
+   * formally, an integer (..., -2, -1, 0, 1, 2, ...), such that one of the ledger's base units
+   * equals 10^-<tt>currencyScale</tt> <tt>currencyCode</tt></p>
+   *
+   * <p>For example, if the integer values represented on the ledger are to be interpreted as
+   * dollar-cents (for the purpose of settling a user's account balance, for instance), then the
+   * ledger's currencyScale is 2. The amount 10000 would be translated visually into a decimal
+   * format via the following equation: 10000 * (10^(-2)), or "100.00".</p>
    */
   Integer getCurrencyScale();
 
@@ -68,6 +70,6 @@ public interface LedgerInfo {
    */
   @Value.Check
   default void check() {
-    InterledgerAddress.requireLedgerPrefix(getLedgerPrefix());
+    InterledgerAddress.requireAddressPrefix(getLedgerPrefix());
   }
 }
